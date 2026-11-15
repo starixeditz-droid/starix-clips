@@ -13,7 +13,7 @@ function App() {
   const [clips, setClips] = useState([])
   const [viewedClips, setViewedClips] = useState([])
   const [search, setSearch] = useState('')
-  const [playerFilter, setPlayerFilter] = useState('All Players')
+  const [playerFilter, setPlayerFilter] = useState('All People')
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
   const [loadingClips, setLoadingClips] = useState(true)
@@ -21,14 +21,27 @@ function App() {
 
   const allRulesAccepted = rules.every(Boolean)
 
-  const players = [
+  const footballPlayers = [
     { name: 'Paolo Maldini', image: '/players/maldini.jpg', description: 'Defensive Legend' },
     { name: 'Cristiano Ronaldo', image: '/players/ronaldo.jpg', description: 'Legendary Goals' },
     { name: 'Neymar Jr', image: '/players/neymar.jpg', description: 'Skills & Tricks' },
-    { name: 'Lionel Messi', image: '/players/messi.jpg', description: 'Football Genius' }
+    { name: 'Lionel Messi', image: '/players/messi.jpg', description: 'Football Genius' },
+    { name: 'Lamine Yamal', image: '/players/yamal.jpg', description: 'Young Talent' },
+    { name: 'Kylian Mbappe', image: '/players/mbappe.jpg', description: 'Football Superstar' }
   ]
 
-  // Videolar va Like ma'lumotlarini yuklash
+  const movieStars = [
+    { name: 'Tom Holland', image: '/movie-stars/tom-holland.jpg', description: 'Spider-Man' },
+    { name: 'Tobey Maguire', image: '/movie-stars/tobey-maguire.jpg', description: 'Spider-Man' },
+    { name: 'Andrew Garfield', image: '/movie-stars/andrew-garfield.jpg', description: 'Spider-Man' },
+    { name: 'Steve Harrington', image: '/movie-stars/steve-harrington.jpg', description: 'Stranger Things' },
+    { name: 'Cillian Murphy', image: '/movie-stars/cillian-murphy.jpg', description: 'Peaky Blinders' },
+    { name: 'Finn Wolfhard', image: '/movie-stars/finn-wolfhard.jpg', description: 'Stranger Things' }
+  ]
+
+  const players = [...footballPlayers, ...movieStars]
+
+  // LOAD CLIPS
   async function loadClips() {
     setLoadingClips(true)
 
@@ -88,7 +101,7 @@ function App() {
     loadClips()
   }, [])
 
-  // Like bosish yoki Like'ni qaytarib olish
+  // LIKE SYSTEM
   async function toggleLike(clip) {
     if (likingClips.includes(clip.id)) return
 
@@ -102,9 +115,7 @@ function App() {
 
       const user = userData.user
 
-      if (!user) {
-        throw new Error('Please login first.')
-      }
+      if (!user) throw new Error('Please login first.')
 
       if (clip.liked_by_me) {
         const { error } = await supabase
@@ -158,6 +169,7 @@ function App() {
     }
   }
 
+  // VIDEO SELECTION
   function handleVideoChange(e) {
     const selectedVideo = e.target.files[0]
     if (!selectedVideo) return
@@ -175,6 +187,7 @@ function App() {
     setMessage('')
   }
 
+  // RECORD VIDEO VIEW
   function recordClipView(id) {
     setViewedClips(previous => {
       if (previous.includes(id)) return previous
@@ -191,7 +204,7 @@ function App() {
     })
   }
 
-  // Videoni Storage va Database'ga yuklash
+  // UPLOAD VIDEO
   async function publishVideo(e) {
     e.preventDefault()
 
@@ -212,7 +225,9 @@ function App() {
       if (!user) throw new Error('Please login first.')
 
       const safeName = video.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const filePath = `${user.id}/${Date.now()}-${safeName}`
+
+      // Correct file path
+      const filePath = user.id + '/' + Date.now() + '-' + safeName
 
       const { error: uploadError } = await supabase.storage
         .from('clips')
@@ -275,13 +290,14 @@ function App() {
     setShowUpload(false)
   }
 
+  // SEARCH AND FILTER
   const filteredClips = clips.filter(clip => {
     const matchesSearch =
       clip.title.toLowerCase().includes(search.toLowerCase()) ||
       clip.player.toLowerCase().includes(search.toLowerCase())
 
     const matchesPlayer =
-      playerFilter === 'All Players' || clip.player === playerFilter
+      playerFilter === 'All People' || clip.player === playerFilter
 
     return matchesSearch && matchesPlayer
   })
@@ -299,7 +315,7 @@ function App() {
     })
   }
 
-  // Video kartasi
+  // CLIP CARD
   function renderClipCard(clip) {
     return (
       <div className="clip-card" key={clip.id}>
@@ -337,6 +353,29 @@ function App() {
     )
   }
 
+  // PERSON CARD
+  function renderPersonCard(item) {
+    return (
+      <div
+        className="clip-card player-card"
+        key={item.name}
+        onClick={() => selectPlayer(item.name)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            selectPlayer(item.name)
+          }
+        }}
+      >
+        <img src={item.image} alt={item.name} />
+        <h3>{item.name}</h3>
+        <p>{item.description}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <nav className="navbar">
@@ -344,14 +383,15 @@ function App() {
 
         <div className="nav-links">
           <a href="#">Home</a>
-          <a href="#players">Players</a>
+          <a href="#players">Football</a>
+          <a href="#movie-stars">Movies & TV</a>
           <a href="#trending-clips">Trending</a>
         </div>
 
         <input
           className="search-input"
           type="text"
-          placeholder="Search clips or players..."
+          placeholder="Search clips or people..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -361,7 +401,7 @@ function App() {
           value={playerFilter}
           onChange={e => setPlayerFilter(e.target.value)}
         >
-          <option>All Players</option>
+          <option>All People</option>
           {players.map(item => (
             <option key={item.name}>{item.name}</option>
           ))}
@@ -374,41 +414,34 @@ function App() {
 
       <main>
         <section className="hero">
-          <p className="tag">FOOTBALL COMMUNITY</p>
+          <p className="tag">FOOTBALL & ENTERTAINMENT COMMUNITY</p>
           <h2>
-            YOUR FOOTBALL.<br />
+            YOUR FAVORITES.<br />
             YOUR <span>MOMENTS.</span>
           </h2>
-          <p>Discover and share the best football moments.</p>
+          <p>Discover and share the best moments from football, movies and TV.</p>
           <button onClick={() => setShowUpload(true)}>Explore Clips</button>
         </section>
 
+        {/* FOOTBALL PLAYERS */}
         <section className="clips" id="players">
-          <h2>Legendary Players</h2>
+          <h2>⚽ Legendary Players</h2>
 
           <div className="clip-grid">
-            {players.map(item => (
-              <div
-                className="clip-card player-card"
-                key={item.name}
-                onClick={() => selectPlayer(item.name)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    selectPlayer(item.name)
-                  }
-                }}
-              >
-                <img src={item.image} alt={item.name} />
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
-              </div>
-            ))}
+            {footballPlayers.map(item => renderPersonCard(item))}
           </div>
         </section>
 
+        {/* MOVIE AND TV STARS */}
+        <section className="clips" id="movie-stars">
+          <h2>🎬 Movie & TV Stars</h2>
+
+          <div className="clip-grid">
+            {movieStars.map(item => renderPersonCard(item))}
+          </div>
+        </section>
+
+        {/* LATEST CLIPS */}
         <section className="clips" id="latest-clips">
           <h2>Latest Clips</h2>
 
@@ -420,13 +453,14 @@ function App() {
             </div>
           ) : (
             <p className="empty-message">
-              {search || playerFilter !== 'All Players'
+              {search || playerFilter !== 'All People'
                 ? 'No clips found. Try another filter.'
                 : 'No clips uploaded yet. Be the first!'}
             </p>
           )}
         </section>
 
+        {/* TRENDING */}
         <section className="clips" id="trending-clips">
           <h2>🔥 Trending Clips</h2>
 
@@ -442,6 +476,7 @@ function App() {
         </section>
       </main>
 
+      {/* UPLOAD MODAL */}
       {showUpload && (
         <div className="upload-overlay">
           <form className="upload-form" onSubmit={publishVideo}>
@@ -464,14 +499,22 @@ function App() {
               required
             />
 
-            <label>Select player</label>
+            <label>Select player or star</label>
             <select
               value={player}
               onChange={e => setPlayer(e.target.value)}
             >
-              {players.map(item => (
-                <option key={item.name}>{item.name}</option>
-              ))}
+              <optgroup label="Football Players">
+                {footballPlayers.map(item => (
+                  <option key={item.name}>{item.name}</option>
+                ))}
+              </optgroup>
+
+              <optgroup label="Movie & TV Stars">
+                {movieStars.map(item => (
+                  <option key={item.name}>{item.name}</option>
+                ))}
+              </optgroup>
             </select>
 
             <label>Select video</label>
